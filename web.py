@@ -36,9 +36,12 @@ def index():
 def read():
     Result = ""
     db = firestore.client()
-    collection_ref = db.collection("靜宜資管")    
-    docs = collection_ref.get()    
-    for doc in docs:         
+    collection_ref = db.collection("靜宜資管")
+    
+    # 這裡將排序後的結果存入 docs，並刪除原本重複的 docs = collection_ref.get()
+    docs = collection_ref.order_by("lab", direction=firestore.Query.DESCENDING).get()  
+    
+    for doc in docs:          
         Result += str(doc.to_dict()) + "<br>"    
     return Result
 
