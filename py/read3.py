@@ -8,14 +8,10 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-
-
+keyword = "楊"
 collection_ref = db.collection("靜宜資管")
-
-
-docs = collection_ref.order_by("lab", direction=firestore.Query.DESCENDING).limit(3).get()
-
-
+docs = collection_ref.get()
 for doc in docs:
-    
-    print("文件內容：{}".format(doc.to_dict()))
+    teacher = doc.to_dict()
+    if keyword in teacher["name"]:
+        print(doc.to_dict()) # 這裡要縮排
