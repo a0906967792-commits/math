@@ -1,48 +1,66 @@
-from flask import Flask,render_template, request
+from flask import Flask, render_template, request
 from datetime import datetime
 import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# 判斷是在 Vercel 還是本地
+# --- Firebase 初始化 (支援本地與 Vercel) ---
 if os.path.exists('serviceAccountKey.json'):
-    # 本地環境：讀取檔案
+    # 本地環境
     cred = credentials.Certificate('serviceAccountKey.json')
 else:
-    # 雲端環境：從環境變數讀取 JSON 字串
+    # 雲端環境
     firebase_config = os.getenv('FIREBASE_CONFIG')
     cred_dict = json.loads(firebase_config)
     cred = credentials.Certificate(cred_dict)
 
-firebase_admin.initialize_app(cred)
-
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
 
 app = Flask(__name__)
 
 @app.route("/")
 def index():
-   link =  "<h1>歡迎來到鄭姿佳的網站20260409</h1>"
-   link +=  "<a href=/mis>課程</a><hr>"
-   link +=  "<a href=/today>現在日期時間</a><hr>"
-   link +=  "<a href=/me>關於我</a><hr>"
-   link +=  "<a href=/welcome?u=姿佳&d=靜宜資管&c=資訊管理導論>Get傳值</a><hr>"
-   link +=  "<a href=/account>POST</a><hr>"
-   link += "<a href=/math>計算次方與根號</a><hr>"
-   link += "<br><a href=/read>讀取Firestore資料</a><br>"
-   return link
+    link = "<h1>歡迎來到鄭姿佳的網站20260409</h1>"
+    link += "<a href=/mis>課程</a><hr>"
+    link += "<a href=/today>現在日期時間</a><hr>"
+    link += "<a href=/me>關於我</a><hr>"
+    link += "<a href=/welcome?u=姿佳&d=靜宜資管&c=資訊管理導論>Get傳值</a><hr>"
+    link += "<a href=/account>POST</a><hr>"
+    link += "<a href=/math>計算次方與根號</a><hr>"
+    link += "<br><a href=/read>讀取全部 Firestore 資料</a><br>"
+    link += "<br><a href=/search>🔍 靜宜資管老師查詢(輸入關鍵字)</a><br>"
+    return link
+
+# --- 整合原本 read.py / read3.py 的搜尋邏輯 ---
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    keyword = ""
+    results = []
+    if request.method == "POST":
+        keyword = request.form.get("keyword") # 取得表單輸入
+        if keyword:
+            db = firestore.client()
+            collection_ref = db.collection("靜宜資管") # 指定資料庫集合
+            docs = collection_ref.get()
+            
+            for doc in docs:
+                teacher = doc.to_dict()
+                # 判斷關鍵字是否在姓名中
+                if keyword in teacher.get("name", ""):
+                    results.append(teacher)
+                    
+    return render_template("search.html", keyword=keyword, results=results)
 
 @app.route("/read")
 def read():
-    Result = ""
+    Result = "<h2>全部老師資料：</h2><hr>"
     db = firestore.client()
-    collection_ref = db.collection("靜宜資管")
-    
-    # 這裡將排序後的結果存入 docs，並刪除原本重複的 docs = collection_ref.get()
-    docs = collection_ref.order_by("lab", direction=firestore.Query.DESCENDING).get()  
-    
-    for doc in docs:          
-        Result += str(doc.to_dict()) + "<br>"    
+    # 根據 lab 進行排序
+    docs = db.collection("靜宜資管").order_by("lab", direction=firestore.Query.DESCENDING).get()
+    for doc in docs:
+        Result += str(doc.to_dict()) + "<br>"
     return Result
 
 @app.route("/mis")

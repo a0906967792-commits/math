@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>靜宜資管老師查詢</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 30px; line-height: 1.6; }
+        .teacher-name { color: blue; font-weight: bold; } /* 藍色老師姓名 */
+        .result-section { margin-top: 20px; }
+        hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>靜宜資管老師查詢</h1>
+
+    <form action="/search" method="POST">
+        <label>請輸入老師姓名關鍵字：</label>
+        <input type="text" name="keyword" value="{{ keyword }}">
+        <button type="submit">查詢</button>
+    </form>
+
+    <hr>
+
+    <div class="result-section">
+        {% if keyword %}
+            <h3>查詢結果 (關鍵字：{{ keyword }})：</h3>
+            
+            {% if results %}
+                {% for teacher in results %}
+                    <p>
+                        <span class="teacher-name">{{ teacher.name }}</span> 
+                        老師的研究室是在 {{ teacher.lab }}
+                    </p>
+                {% endfor %}
+            {% else %}
+                <p>抱歉，查無此關鍵字姓名老師資料。</p>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <br>
+    <a href="/">返回首頁</a>
+</body>
+</html>
