@@ -40,7 +40,65 @@ def index():
     link += "<br><a href=/read>讀取全部 Firestore 資料</a><br>"
     link += "<br><a href=/search>靜宜資管老師查詢(輸入關鍵字)</a><br>"
     link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a><br>"
+    link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
     return link
+
+
+@app.route("/movie1")
+def movie1():
+    # 1. 取得使用者透過搜尋框輸入的關鍵字 (對應下面的 name="q")
+    q = request.args.get("q")
+    
+    # 2. 建立網頁上方的搜尋表單 (HTML)
+    # 這裡放一個輸入框和一個送出按鈕
+    R = """
+    <form action="/movie1" method="get">
+        請輸入片名關鍵字：<input type="text" name="q">
+        <button type="submit">查詢</button>
+    </form>
+    <a href="/movie1">顯示全部電影</a>
+    <hr>
+    """
+
+    # 3. 爬蟲抓取資料
+    url = "https://www.atmovies.com.tw/movie/next/#google_vignette"
+    try:
+        Data = requests.get(url)
+        Data.encoding = "utf-8"
+        sp = BeautifulSoup(Data.text, "html.parser")
+        result = sp.select(".filmListAllX li")
+        
+        found_any = False
+        for item in result:
+            try:
+                movie_name = item.find("img").get("alt")
+                
+                # --- 篩選邏輯：如果沒輸入(None)或符合關鍵字就顯示 ---
+                if q is None or q == "" or q in movie_name:
+                    found_any = True
+                    link_path = item.find("a").get("href")
+                    img_path = item.find("img").get("src")
+                    
+                    full_link = "https://www.atmovies.com.tw" + link_path
+                    full_img = "https://www.atmovies.com.tw" + img_path
+                    
+                    # 組合顯示內容：電影名(超連結) + 圖片
+                    R += f'<a href="{full_link}" target="_blank"><b>{movie_name}</b></a><br>'
+                    R += f'<img src="{full_img}" width="150"><br><br>'
+            except:
+                continue
+        
+        if q and not found_any:
+            R += f"找不到關於「{q}」的電影。"
+
+    except Exception as e:
+        return f"連線錯誤: {str(e)}"
+
+    return R
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 
 # --- 網路爬蟲測試 (bs4) ---
 @app.route("/spider")
