@@ -41,49 +41,52 @@ def index():
     link += "<br><a href=/search>靜宜資管老師查詢(輸入關鍵字)</a><br>"
     link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a><br>"
     link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
-    link += "<br><a href=/spidermovie>爬取即將電影上映影</a><br>"
+    link += "<br><a href=/spidermovie>爬取電影資料查詢</a><br>"
 
     return link
 
 
-@app.route("/spidermovie")
+@app.route("/spidermovie", methods=["GET", "POST"])
 def spidermovie():
-    R = ""
-
     db = firestore.client()
-
-    url = "http://www.atmovies.com.tw/movie/next/"
-    Data = requests.get(url)
-    Data.encoding = "utf-8"
-    sp = BeautifulSoup(Data.text, "html.parser")
-    lastUpdate = sp.find(class_="smaller09").text.replace("更新時間：","")
-
-    result=sp.select(".filmListAllX li")
+    # 取得搜尋關鍵字 (來自表單的 q)
+    q = request.args.get("q")
     
-    total = 0
-    for item in result:
-      total += 1
-      movie_id = item.find("a").get("href").replace("/movie/","").replace("/","")
-      title = item.find(class_="filmtitle").text
-      picture = "https://www.atmovies.com.tw" + item.find("img").get("src")
-      hyperlink = "https://www.atmovies.com.tw" + item.find("a").get("href")
-      showDate = item.find(class_ = "runtime").text[5:15]
+    # 基本的 HTML 搜尋表單
+    R = """
+    <form action="/spidermovie" method="get">
+        請輸入片名關鍵字：<input type="text" name="q">
+        <button type="submit">查詢</button>
+    </form>
+    <a href="/spidermovie">顯示全部電影</a>
+    <hr>
+    """
 
-      doc = {
-          "title": title,
-          "picture": picture,
-          "hyperlink": hyperlink,
-          "showDate": showDate,
-          "lastUpdate": lastUpdate
-      }
+    # 從 Firebase 的 "電影2B" 集合抓取所有資料
+    movies_ref = db.collection("電影2B")
+    docs = movies_ref.get()
+    
+    found = False
+    for doc in docs:
+        movie = doc.to_dict()
+        title = movie.get("title", "")
+        
+        # 篩選邏輯：如果沒輸入關鍵字則顯示全部；如果有輸入則比對片名
+        if not q or q in title:
+            found = True
+            picture = movie.get("picture")
+            hyperlink = movie.get("hyperlink")
+            showDate = movie.get("showDate")
+            
+            # 組合顯示內容
+            R += f'<a href="{hyperlink}" target="_blank"><b>{title}</b></a><br>'
+            R += f'上映日期：{showDate}<br>'
+            R += f'<img src="{picture}" width="150"><br><hr>'
+            
+    if not found:
+        R += f"找不到包含「{q}」的電影。"
 
-      doc_ref = db.collection("電影2B").document(movie_id)
-      doc_ref.set(doc)
-
-    R += "網站最近更新日期:" + lastUpdate + "<br>"
-    R += "總共爬取" + str(total) + "部電影到資料庫"
-
-
+    R += "<br><a href='/'>回首頁</a>"
     return R
 
 
