@@ -41,7 +41,51 @@ def index():
     link += "<br><a href=/search>靜宜資管老師查詢(輸入關鍵字)</a><br>"
     link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a><br>"
     link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
+    link += "<br><a href=/spidermovie>爬取即將電影上映影</a><br>"
+
     return link
+
+
+@app.route("/spidermovie")
+def spidermovie():
+    R = ""
+
+    db = firestore.client()
+
+    url = "http://www.atmovies.com.tw/movie/next/"
+    Data = requests.get(url)
+    Data.encoding = "utf-8"
+    sp = BeautifulSoup(Data.text, "html.parser")
+    lastUpdate = sp.find(class_="smaller09").text.replace("更新時間：","")
+
+    result=sp.select(".filmListAllX li")
+    
+    total = 0
+    for item in result:
+      total += 1
+      movie_id = item.find("a").get("href").replace("/movie/","").replace("/","")
+      title = item.find(class_="filmtitle").text
+      picture = "https://www.atmovies.com.tw" + item.find("img").get("src")
+      hyperlink = "https://www.atmovies.com.tw" + item.find("a").get("href")
+      showDate = item.find(class_ = "runtime").text[5:15]
+
+      doc = {
+          "title": title,
+          "picture": picture,
+          "hyperlink": hyperlink,
+          "showDate": showDate,
+          "lastUpdate": lastUpdate
+      }
+
+      doc_ref = db.collection("電影2B").document(movie_id)
+      doc_ref.set(doc)
+
+    R += "網站最近更新日期:" + lastUpdate + "<br>"
+    R += "總共爬取" + str(total) + "部電影到資料庫"
+
+
+    return R
+
 
 
 @app.route("/movie1")
@@ -96,8 +140,7 @@ def movie1():
 
     return R
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
 
 
 # --- 網路爬蟲測試 (bs4) ---
@@ -134,6 +177,33 @@ def spider():
         
     except Exception as e:
         return f"爬蟲發生錯誤：{str(e)}"
+
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    if request.method == "POST":
+        cond = request.form["keyword"]  # 取得你在輸入框打的字
+        db = firestore.client()
+        docs = db.collection("靜宜資管").get()
+        
+        Result = f"搜尋關鍵字「{cond}」的結果：<br><hr>"
+        found = False
+        
+        for doc in docs:
+            teacher = doc.to_dict()
+            name = teacher.get("name", "")
+            
+            # 如果輸入的關鍵字在姓名裡面
+            if cond in name:
+                Result += f"找到老師：<b>{name}</b><br>"
+                found = True
+        
+        if not found:
+            Result += "查無此老師姓名。"
+            
+        return Result + "<br><a href='/search'>重新查詢</a> | <a href='/'>回首頁</a>"
+    
+    # GET 請求顯示搜尋頁面
+    return render_template("search.html")
 
 @app.route("/read")
 def read():
