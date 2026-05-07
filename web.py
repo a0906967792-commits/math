@@ -37,16 +37,59 @@ def index():
     link += "<a href=/welcome?u=姿佳&d=靜宜資管&c=資訊管理導論>Get傳值</a><hr>"
     link += "<a href=/account>POST</a><hr>"
     link += "<a href=/math>計算次方與根號</a><hr>"
-    link += "<br><a href=/read>讀取全部 Firestore 資料</a><br>"
-    link += "<br><a href=/search>靜宜資管老師查詢(輸入關鍵字)</a><br>"
-    link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a><br>"
-    link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
-    link += "<br><a href=/spidermovie>爬取電影資料查詢</a><br>"
-    link += "<br><a href=/road>台中市十大肇事路口</a><br>"
-    link += "<br><a href=/road1>台中市十大肇事路口查詢</a><br>"
+    link += "<br><a href=/read>讀取全部 Firestore 資料</a><hr>"
+    link += "<br><a href=/search>靜宜資管老師查詢(輸入關鍵字)</a>"
+    link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a>"
+    link += "<hr><a href=/movie1>爬取即將上映的電影</a><hr>"
+    link += "<br><a href=/spidermovie>爬取電影資料查詢</a><hr>"
+    link += "<br><a href=/road>台中市十大肇事路口</a><hr>"
+    link += "<br><a href=/road1>台中市十大肇事路口查詢</a><hr>"
+    link += "<br><a href=/weather>天氣</a><hr>"
 
     return link
 
+#天氣
+@app.route("/weather")
+def weather():
+    import requests, json
+    from flask import request
+    
+    city = request.args.get("city", "臺中市")
+    city = city.replace("台", "臺")
+    
+    # ⚠️ 請確認這裡的 Token 是你從氣象署官網申請的個人授權碼
+    token = "rdec-key-123-45678-011121314" 
+    url = f"https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization={token}&format=JSON&locationName={city}"
+    
+    R = f"<h1>{city} 天氣查詢結果</h1><br>"
+    
+    try:
+        response = requests.get(url, timeout=10)
+        # 檢查 HTTP 狀態碼是否為 200 (成功)
+        if response.status_code == 200:
+            json_data = response.json() # 直接使用 .json() 比較安全
+            
+            if "records" in json_data and json_data["records"]["location"]:
+                location_data = json_data["records"]["location"]
+                weather_element = location_data[0]["weatherElement"]
+                state = weather_element[0]["time"][0]["parameter"]["parameterName"]
+                rain = weather_element[1]["time"][0]["parameter"]["parameterName"]
+                
+                R += f"目前天氣：<b>{state}</b><br>"
+                R += f"降雨機率：<b>{rain}%</b><br>"
+            else:
+                R += "找不到該縣市資料，請輸入正確名稱（如：臺中市）。<br>"
+        else:
+            R += f"API 連線失敗，狀態碼：{response.status_code} (請檢查 Token 是否正確)<br>"
+            
+    except Exception as e:
+        R += f"查詢發生錯誤：{str(e)}<br>"
+
+    R += "<br><hr><a href='/'>回首頁</a>"
+    return R
+
+
+#十大肇事路口查詢版
 @app.route("/road1", methods=["GET", "POST"])
 def road1():
     q = request.values.get("q")
