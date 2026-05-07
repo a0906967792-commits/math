@@ -43,13 +43,77 @@ def index():
     link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
     link += "<br><a href=/spidermovie>爬取電影資料查詢</a><br>"
     link += "<br><a href=/road>台中市十大肇事路口</a><br>"
+    link += "<br><a href=/road1>台中市十大肇事路口查詢</a><br>"
 
     return link
 
+@app.route("/road1", methods=["GET", "POST"])
+def road1():
+    q = request.values.get("q")
+    results = ""
+   
+    if q:
+        url = "https://datacenter.taichung.gov.tw/swagger/OpenData/a1b899c0-511f-4e3d-b22b-814982a97e41"
+       
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Referer': 'https://datacenter.taichung.gov.tw/',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+       
+        max_retries = 3  # 最多重試 3 次
+        for i in range(max_retries):
+            try:
+                # verify=False 跳過 SSL 檢查，有時能解決斷連問題
+                # 使用 requests 直接連線
+                response = requests.get(url, headers=headers, timeout=15, verify=False)
+                response.encoding = 'utf-8'
+               
+                if response.status_code == 200:
+                    json_data = response.json()
+                    found = False
+                    results = "<h3>查詢結果：</h3><table border='1' style='border-collapse: collapse; width:100%;'>"
+                    results += "<tr style='background-color:#e6f3ff;'><th>路口名稱</th><th>件數</th><th>主要肇因</th></tr>"
+                   
+                    for item in json_data:
+                        if q in item.get("路口名稱", ""):
+                            found = True
+                            results += f"<tr><td>{item['路口名稱']}</td><td>{item['總件數']}</td><td>{item['主要肇因']}</td></tr>"
+                    results += "</table>"
+                   
+                    if not found:
+                        results = f"<p style='color:orange;'>查無關於「{q}」的資料。</p>"
+                    break # 成功抓到資料，跳出重試迴圈
+               
+            except Exception as e:
+                if i < max_retries - 1:
+                    time.sleep(1) # 失敗後等一秒再試
+                    continue
+                else:
+                    results = f"<div style='color:red;'>連線失敗第 {i+1} 次：{str(e)}<br>目前政府伺服器拒絕您的 IP 連線，建議換個網路試試看。</div>"
+
+    html = f"""
+    <h1>台中市易肇事路口查詢</h1>
+    <form action="/road" method="get">
+        請輸入路名：<input type="text" name="q" value="{q if q else ''}">
+        <button type="submit">查詢</button>
+    </form>
+    <hr>
+    {results}
+    <br><a href="/">返回首頁</a>
+    """
+    return html
+
+
+#十字路口沒查詢
 @app.route("/road", methods=["GET", "POST"])
 def road():
     # 建立網頁標題與基礎 HTML
-    R = "<h1>十大肇事路口(113年10月)</h1><br>"
+    R = "<h1>十大肇事路口(113年10月)作者:姿佳</h1><br>"
     
     import requests, json
     import urllib3
