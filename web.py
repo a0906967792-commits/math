@@ -42,8 +42,63 @@ def index():
     link += "<hr><a href=/spider>網路爬蟲測試 (bs4)</a><br>"
     link += "<hr><a href=/movie1>爬取即將上映的電影</a><br>"
     link += "<br><a href=/spidermovie>爬取電影資料查詢</a><br>"
+    link += "<br><a href=/road>台中市十大肇事路口</a><br>"
 
     return link
+
+@app.route("/road", methods=["GET", "POST"])
+def road():
+    # 建立網頁標題與基礎 HTML
+    R = "<h1>十大肇事路口(113年10月)</h1><br>"
+    
+    import requests, json
+    import urllib3
+    from flask import request
+
+    # 隱藏 SSL 安全警告（因為我們會使用 verify=False）
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    url = "https://datacenter.taichung.gov.tw/swagger/OpenData/a1b899c0-511f-4e3d-b22b-814982a97e41"
+    
+    # 模擬更完整的瀏覽器標頭
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+    }
+    
+    try:
+        # verify=False 解決憑證問題, timeout=10 防止卡死
+        response = requests.get(url, headers=headers, verify=False, timeout=10)
+        response.encoding = 'utf-8' # 確保中文不變亂碼
+        
+        # 轉換 JSON
+        JsonData = response.json()
+        
+        # 從網址取得 q 參數，例如：/road?q=中科路
+        Road_query = request.args.get("q", "") 
+
+        found = False
+        for item in JsonData:
+            # 判斷路口名稱是否包含搜尋關鍵字
+            if Road_query in item.get("路口名稱", ""):
+                # 注意：這裡使用 f-string 時，item['路口名稱'] 要用單引號，外面用雙引號
+                R += f"<b>{item['路口名稱']}</b>，原因：{item['主要肇因']} <br>"
+                found = True
+        
+        if not found:
+            if Road_query == "":
+                R += "<i>請在網址後加上 ?q=路名 來搜尋，或查看下方所有列表：</i><br><br>"
+                # 如果沒搜關鍵字，也可以考慮顯示前幾筆或全部
+                for item in JsonData[:10]: # 先顯示前10筆示範
+                    R += f"{item['路口名稱']} <br>"
+            else:
+                R += f"抱歉，查無關於「{Road_query}」的相關資料！<br>"
+    except Exception as e:
+        R += f"<div style='color:red;'>連線錯誤：{str(e)}</div>"
+
+    R += "<br><hr><a href='/'>回首頁</a>"
+    return R
+
 
 
 @app.route("/spidermovie", methods=["GET", "POST"])
