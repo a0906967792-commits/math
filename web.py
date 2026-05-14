@@ -53,36 +53,27 @@ def index():
 def webhook():
     req = request.get_json(force=True)
     action = req["queryResult"]["action"]
-    
-    if (action == "rateChoice"):
-        rate = req["queryResult"]["parameters"]["rate"] # 取得使用者選的分級
-        
-        # 爬取開眼電影網
-        url = "http://www.atmovies.com.tw/movie/new/"
-        res = requests.get(url)
-        res.encoding = "utf-8"
-        soup = BeautifulSoup(res.text, "html.parser")
-        
-        # 抓取所有電影區塊
-        items = soup.select(".filmListAllX li")
-        movie_list = []
-        
-        for item in items:
-            # 判斷分級圖片（這部分需根據網頁實際 img 標籤的 src 判斷）
-            # 這裡示範關鍵邏輯：檢查分級圖示是否符合使用者選的 rate
-            img_tag = item.select_one("img")
-            if img_tag and rate in img_tag.get('src', ''): 
-                title = item.select_one(".filmtitle a").text.strip()
-                movie_list.append(title)
-        
-        if movie_list:
-            result_text = "本週上映的 " + rate + " 電影有：" + "、".join(movie_list)
-        else:
-            result_text = "抱歉，目前沒有找到符合 " + rate + " 分級的本週新片。"
-            
-        info = "我是鄭姿佳設計的機器人。" + result_text
+   
+    if action == "rateChoice":
+        rate = req["queryResult"]["parameters"]["rate"]
+       
+        db = firestore.client()
+        collection_ref = db.collection("本週新片含分級")
+        docs = collection_ref.where("rate", "==", rate).get()
+       
+        res = f"為您找出的本週 {rate} 電影有：\n"
+        found = False
+        for doc in docs:
+            found = True
+            m = doc.to_dict()
+            res += f"- {m.get('title')} (片長：{m.get('showLength')} 分)\n"
+       
+        if not found:
+            res = f"抱歉，本週資料庫中沒有標記為 {rate} 的電影喔！"
+           
+        return make_response(jsonify({"fulfillmentText": res}))
 
-    return make_response(jsonify({"fulfillmentText": info}))
+    return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
 
 
 #------本周新片-------
