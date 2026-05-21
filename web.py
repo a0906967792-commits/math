@@ -46,8 +46,13 @@ def index():
     link += "<br><a href=/road1>台中市十大肇事路口查詢</a><hr>"
     link += "<br><a href=/weather>天氣</a><hr>"
     link += "<br><a href=/rate>本週新片進DB</a><hr>"
+    link += "<br><a href=/wd>聊天機器人</a><hr>"
 
     return link
+
+@app.route("/wd")
+def wd():
+    return render_template("wd.html")
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
