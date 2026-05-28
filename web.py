@@ -62,7 +62,7 @@ def index():
 
 @app.route("/msg")
 def msg():
-    return render_template("messeng.html")
+    return render_template("messenge.html")
 
 @app.route('/ask', methods=['GET', 'POST']) 
 def ask():
