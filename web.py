@@ -36,7 +36,7 @@ client = genai.Client()
 # --- 整合後的首頁 ---
 @app.route("/")
 def index():
-    link = "<h1>歡迎來到鄭姿佳的網站20260409</h1>"
+    link = "<h1>歡迎來到鄭姿佳的網站20260528</h1>"
     link += "<a href=/mis>課程</a><hr>"
     link += "<a href=/today>現在日期時間</a><hr>"
     link += "<a href=/me>關於我</a><hr>"
