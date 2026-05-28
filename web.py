@@ -99,6 +99,7 @@ def webhook():
     req = request.get_json(force=True)
     action = req["queryResult"]["action"]
    
+    # === 動作 1：電影分級查詢 ===
     if action == "rateChoice":
         rate = req["queryResult"]["parameters"]["rate"]
        
@@ -106,7 +107,7 @@ def webhook():
         collection_ref = db.collection("本週新片含分級")
         docs = collection_ref.where("rate", "==", rate).get()
        
-        res = f"為您找出的本週 {rate} 電影有：\n"
+        res = f"我是陳芯霈設計的機器人，為您找出的本週 {rate} 電影有：\n"
         found = False
         for doc in docs:
             found = True
@@ -114,40 +115,41 @@ def webhook():
             res += f"- {m.get('title')} (片長：{m.get('showLength')} 分)\n"
        
         if not found:
-            res = f"抱歉，本週資料庫中沒有標記為 {rate} 的電影喔！"
+            res = f"抱歉，本週資料庫中沒有標記為 {rate} 的電影！"
            
+        # 記得要在這裡把電影結果 return 出去！
         return make_response(jsonify({"fulfillmentText": res}))
 
-        elif (action == "input.unknown"):
-        # #info = req["queryResult"]["queryText"]
-        
+    # === 動作 2：Dialogflow 聽不懂時，交給 Gemini AI 回覆 ===
+    # 注意縮排！這個 elif 必須跟上面的 if 對齊！
+    elif action == "input.unknown":
         instruction_text = (
-            "你是一個熱心且知識豐富的專業智慧助理。",
-            "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"
+            "你是一個熱心且知識豐富的專業智慧助理。"
+            "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"        
         )
-        
-        ai_config = types.GenerateContentConfig(
-            max_output_tokens=500,
-            system_instruction=instruction_text
-        )
-        
-        # 修正：將模型名稱改為正確的 gemini-2.5-flash
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=req["queryResult"]["queryText"],
-            config=ai_config,
-        )
-        
-        if response.text:
-            info = response.text
-        else:
-            info = "抱歉，我現在無法生成回應，請稍後再試。"
-            
-        # 修正：這行要縮排，跟上面的 info 對齊，代表它是 elif 區塊的結尾
+
+        # 這裡使用的是全域的 client
+        try:
+            # 確保有設定系統指令 (若使用的套件支援 config)
+            # 如果部署時這幾行報錯，可以簡化為只帶入 model 和 contents
+            response = client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=req["queryResult"]["queryText"],
+                config={"system_instruction": instruction_text} # 簡化 config 寫法防錯
+            )
+
+            if response.text:
+                info = response.text
+            else:
+                info = "抱歉，我現在無法生成回應，請稍後再試。"
+        except Exception as e:
+            info = f"AI 連線發生錯誤: {str(e)}"
+       
+        # 這裡要回傳的是 info！而不是電影的 res！
         return make_response(jsonify({"fulfillmentText": info}))
 
-# 修正：這行要完全頂格（不留空白），跟最上面的 def webhook(): 對齊
-return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
+    # === 動作 3：以上兩個動作都沒觸發時的預設回傳 ===
+    return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
 
 
 
