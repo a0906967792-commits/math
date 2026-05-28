@@ -56,8 +56,13 @@ def index():
     link += "<br><a href=/wd>聊天機器人</a><hr>"
     link += "<br><a href=/AI>ai</a><hr>"
     link += "<br><a href=/ask>ai2</a><hr>"
+    link += "<br><a href=/msg>AI聊天</a><hr>"
 
     return link
+
+@app.route("/msg")
+def msg():
+    return render_template("messeng.html")
 
 @app.route('/ask', methods=['GET', 'POST']) 
 def ask():

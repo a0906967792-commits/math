@@ -6,9 +6,9 @@ Data = requests.get(url)
 Data.encoding = "utf-8"
 #print(Data.text)
 sp = BeautifulSoup(Data.text, "html.parser")
-result=sp.select(".team-box a")
+result=sp.select(".team-box p")
 print(result)
 
 for i in result:
-	print(i.text, i.get("href"))
+	print(i)
 	print()

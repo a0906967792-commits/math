@@ -1,23 +1,43 @@
+import firebase_admin
+from firebase_admin import credentials, firestore
+cred = credentials.Certificate("serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
+
 import requests
 from bs4 import BeautifulSoup
-
-url = "https://www.atmovies.com.tw/movie/next/#google_vignette"
+url = "http://www.atmovies.com.tw/movie/next/"
 Data = requests.get(url)
 Data.encoding = "utf-8"
-
 sp = BeautifulSoup(Data.text, "html.parser")
-result = sp.select(".filmListAllX li")
+lastUpdate = sp.find(class_="smaller09").text.replace("更新時間：","")
 
-q = input("請輸入片名關鍵字：")
-
+result=sp.select(".filmListAllX li")
+info = ""
+total = 0
 for item in result:
-    # 取得電影名稱
-    movie_name = item.find("img").get("alt")
-    
-    # 檢查關鍵字是否在電影名稱中
-    if q in movie_name:
-        # --- 重點：下面這幾行一定要縮排 (打一個 Tab 鍵) ---
-        print(movie_name)
-        print("https://www.atmovies.com.tw/" + item.find("a").get("href"))
-        print("https://www.atmovies.com.tw/" + item.find("img").get("src"))
-        print()
+  total += 1
+  movie_id = item.find("a").get("href").replace("/movie/","").replace("/","")
+  title = item.find(class_="filmtitle").text
+  picture = "https://www.atmovies.com.tw" + item.find("img").get("src")
+  hyperlink = "https://www.atmovies.com.tw" + item.find("a").get("href")
+  showDate = item.find(class_ = "runtime").text[5:15]
+
+  info += movie_id + "\n" + title + "\n" + picture + "\n"+ hyperlink + "\n" + showDate + "\n\n"
+
+
+  doc = {
+      "title": title,
+      "picture": picture,
+      "hyperlink": hyperlink,
+      "showDate": showDate,
+      "lastUpdate": lastUpdate
+  }
+
+  doc_ref = db.collection("電影2B").document(movie_id)
+  doc_ref.set(doc)
+
+  #print(info)
+  print(lastUpdate)
+  print("總共爬取" + str(total) + "部電影到資料庫")
