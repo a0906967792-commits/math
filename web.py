@@ -1,3 +1,4 @@
+from google.genai import types
 from google import genai
 
 import requests
@@ -117,7 +118,12 @@ def webhook():
            
         return make_response(jsonify({"fulfillmentText": res}))
 
+        elif (action == "input.unknown"):
+        info =  req["queryResult"]["queryText"]
+
+
     return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
+
 
 
 #------本周新片-------
