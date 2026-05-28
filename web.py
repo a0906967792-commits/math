@@ -1,3 +1,5 @@
+from google import genai
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -26,6 +28,10 @@ if not firebase_admin._apps:
 
 app = Flask(__name__)
 
+# 在全域（函式外面）建立 Client 物件，只初始化一次即可，不用每次初始化
+client = genai.Client()
+
+
 
 # --- 整合後的首頁 ---
 @app.route("/")
@@ -47,8 +53,20 @@ def index():
     link += "<br><a href=/weather>天氣</a><hr>"
     link += "<br><a href=/rate>本週新片進DB</a><hr>"
     link += "<br><a href=/wd>聊天機器人</a><hr>"
+    link += "<br><a href=/AI>ai</a><hr>"
 
     return link
+
+@app.route("/AI")
+def AI():
+    # 每次使用者拜訪該路徑時，直接使用全域的 client 呼叫模型
+    response = client.models.generate_content(
+        model='gemini-3.5-flash',
+        contents='我想查詢靜宜大學資管系的評價？',
+    )
+    
+    # 回傳生成的文字
+    return response.text
 
 @app.route("/wd")
 def wd():
