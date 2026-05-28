@@ -119,10 +119,35 @@ def webhook():
         return make_response(jsonify({"fulfillmentText": res}))
 
         elif (action == "input.unknown"):
-        info =  req["queryResult"]["queryText"]
+        # #info = req["queryResult"]["queryText"]
+        
+        instruction_text = (
+            "你是一個熱心且知識豐富的專業智慧助理。",
+            "對於使用者的提問，請回覆重點的關鍵字，不要重述問題。"
+        )
+        
+        ai_config = types.GenerateContentConfig(
+            max_output_tokens=500,
+            system_instruction=instruction_text
+        )
+        
+        # 修正：將模型名稱改為正確的 gemini-2.5-flash
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=req["queryResult"]["queryText"],
+            config=ai_config,
+        )
+        
+        if response.text:
+            info = response.text
+        else:
+            info = "抱歉，我現在無法生成回應，請稍後再試。"
+            
+        # 修正：這行要縮排，跟上面的 info 對齊，代表它是 elif 區塊的結尾
+        return make_response(jsonify({"fulfillmentText": info}))
 
-
-    return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
+# 修正：這行要完全頂格（不留空白），跟最上面的 def webhook(): 對齊
+return make_response(jsonify({"fulfillmentText": "Webhook 運作正常，但未觸發特定動作。"}))
 
 
 
